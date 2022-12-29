@@ -1,0 +1,75 @@
+{
+    "version": "0.2.0",
+    "compounds": [
+        {
+            "name": "All",
+            "configurations": [
+                "OrderService (WebAPI)",
+                "Orchestrator (Worker)",
+                "PaymentService (Worker)",
+            ],
+            "stopAll": true,
+        } 
+    ],
+    "configurations": [
+        {
+            "name": "Orchestrator (Worker)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build_Orchestrator",
+            "program": "${workspaceFolder}/src/UOC.Orchestrator/bin/Debug/net6.0/UOC.Orchestrator.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/UOC.Orchestrator",
+            "stopAtEntry": false,
+            "console": "internalConsole",
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+                "uriFormat": "%s/ready"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:6001"
+            }
+        },
+        {
+            "name": "PaymentService (Worker)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build_PaymentService",
+            "program": "${workspaceFolder}/src/UOC.PaymentService/bin/Debug/net6.0/UOC.PaymentService.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/UOC.PaymentService",
+            "stopAtEntry": false,
+            "console": "internalConsole",
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+                "uriFormat": "%s/ready"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:6002"
+            }
+        },
+        {
+            "name": "OrderService (WebAPI)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build_OrderService",
+            "program": "${workspaceFolder}/src/UOC.OrderService/bin/Debug/net6.0/UOC.OrderService.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/UOC.OrderService",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+                "uriFormat": "%s/swagger"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:6264"
+            }
+        }
+    ]
+}

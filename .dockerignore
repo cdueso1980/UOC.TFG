@@ -1,0 +1,16 @@
+# Build results
+**/[Bb]in/
+**/[Oo]bj/
+**/[Ll]og/
+
+**/.vscode/
+**/.vs/
+**/.idea/
+
+.docker/
+.dotnet
+.git/
+.github/
+
+.dockerignore
+.Microsoft.DotNet.ImageBuilder

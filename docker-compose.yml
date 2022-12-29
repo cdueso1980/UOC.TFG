@@ -1,0 +1,158 @@
+version: "3.9"
+
+services:
+  #Services
+  orchestrator:
+    container_name: orchestrator_uoc
+    image: localhost/uoc_orchestrator:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MAIN_ROOT: UOC.Orchestrator
+    ports:
+      - 10001:80
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:80
+      postgresql__host: bbdd_uoc
+      messaging__rabbitConfiguration__host: rabbitmq_uoc
+      Observability__EndpointAddress: http://otel-collector:4317
+    depends_on:
+      bbdd:
+        condition: service_healthy
+      messaging:
+        condition: service_healthy
+
+  order:
+    container_name: order_uoc
+    image: localhost/uoc_order:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MAIN_ROOT: UOC.OrderService
+    ports:
+      - 10002:80
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:80
+      postgresql__host: bbdd_uoc
+      messaging__rabbitConfiguration__host: rabbitmq_uoc
+      Observability__EndpointAddress: http://otel-collector:4317
+    depends_on:
+      bbdd:
+        condition: service_healthy
+      messaging:
+        condition: service_healthy
+
+  payment:
+    container_name: payment_uoc
+    image: localhost/uoc_payment:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MAIN_ROOT: UOC.PaymentService
+    ports:
+      - 10003:80
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:80
+      postgresql__host: bbdd_uoc
+      messaging__rabbitConfiguration__host: rabbitmq_uoc
+      Observability__EndpointAddress: http://otel-collector:4317
+    depends_on:
+      bbdd:
+        condition: service_healthy
+      messaging:
+        condition: service_healthy
+
+  #Infrastructure
+  messaging:
+    container_name: rabbitmq_uoc
+    image: rabbitmq:3.9.18-management
+    ports:
+      - "15672:15672" 
+      - "5672:5672"
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  bbdd:
+    container_name: bbdd_uoc
+    image: postgres:12.4
+    command: postgres -c 'max_connections=1000'
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: changeit
+      POSTGRES_DB: uoc
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.57.2
+    container_name: otel-collector
+    command: [ "--config=/etc/otel-collector-config.yaml" ]
+    volumes:
+      - ./configs/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+      #- ./output:/etc/output:rw # Store the logs
+    ports:
+      - "8888:8888"   # Prometheus metrics exposed by the collector
+      - "8889:8889"   # Prometheus exporter metrics
+      - "4317:4317"   # OTLP gRPC receiver
+  
+  prometheus:
+    image: prom/prometheus:v2.37.0
+    container_name: prometheus
+    volumes:
+      - ./configs/prometheus.yaml:/etc/prometheus/prometheus.yml
+    restart: unless-stopped
+    ports:
+      - "9091:9090"
+
+  tempo:
+    image: grafana/tempo:1.4.1
+    container_name: tempo
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      #- /etc/localtime:/etc/localtime:ro
+      - ./configs/tempo.yml:/etc/tempo.yaml
+    restart: unless-stopped
+    ports:
+      - 3200:3200  # tempo
+      - 4007:4317  # otlp grpc
+
+  loki:
+    image: grafana/loki:2.5.0
+    container_name: loki
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      #- /etc/localtime:/etc/localtime:ro      
+      - ./configs/loki.yml:/etc/loki/local-config.yaml
+    restart: unless-stopped
+    ports:
+      - 3100:3100
+
+  grafana:
+    image: grafana/grafana:9.0.1
+    container_name: grafana
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    volumes:
+      #- /etc/localtime:/etc/localtime:ro
+      - ./configs/grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ./configs/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+    restart: unless-stopped
+    ports:
+      - 3001:3000
+

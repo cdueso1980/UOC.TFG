@@ -1,0 +1,56 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+
+exporters:
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+
+  otlp/tempo:
+    endpoint: tempo:4007
+    tls:
+      insecure: true
+  
+  loki:
+    endpoint: http://loki:3100/loki/api/v1/push
+    tls:
+      insecure: true
+    format: json
+    labels:
+      resource:
+        service.name: "service_name"
+      attributes:
+        dotnet.ilogger.category: "Namespace"
+      record:
+        # Adds 'traceID' as a log label, seen as 'traceid' in Loki.
+        traceID: "traceid"
+
+  # file:
+  #   path: /etc/output/logs.json
+
+processors:
+  attributes:
+    actions:
+      - key: environment
+        value: local
+        action: insert
+  batch:
+
+service:
+  telemetry:
+    logs:
+      level: "debug"
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch, attributes]
+      exporters: [otlp/tempo]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [prometheus]
+    logs:
+      receivers: [otlp]
+      exporters: [loki]
